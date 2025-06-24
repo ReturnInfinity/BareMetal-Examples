@@ -1,8 +1,8 @@
 // hello.c -- Output a 'Hello, world!' message
 
-// gcc -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc.o helloc.c
+// gcc -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o hello.o hello.c
 // gcc -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o libBareMetal.o libBareMetal.c
-// ld -T c.ld -o helloc.app helloc.o libBareMetal.o
+// ld -T c.ld -o hello.app hello.o libBareMetal.o
 
 #include "libBareMetal.h"
 
