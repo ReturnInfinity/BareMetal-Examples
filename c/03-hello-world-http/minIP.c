@@ -166,7 +166,7 @@ int main()
 			memset(tosend, 0, ETH_FRAME_LEN); // clear the send buffer
 			if (swap16(rx->type) == ETHERTYPE_ARP)
 			{
-				b_output(arp, (unsigned long)strlen(arp));
+				//b_output(arp, (unsigned long)strlen(arp));
 				arp_packet* rx_arp = (arp_packet*)buffer;
 				if (swap16(rx_arp->opcode) == ARP_REQUEST)
 				{
@@ -199,7 +199,7 @@ int main()
 			}
 			else if (swap16(rx->type) == ETHERTYPE_IPv4)
 			{
-				b_output(ipv4, (unsigned long)strlen(ipv4));
+				//b_output(ipv4, (unsigned long)strlen(ipv4));
 				ipv4_packet* rx_ipv4 = (ipv4_packet*)buffer;
 				if(rx_ipv4->protocol == PROTOCOL_IP_ICMP)
 				{
@@ -208,7 +208,7 @@ int main()
 					{
 						if (*(u32*)rx_icmp->ipv4.dest_ip == *(u32*)src_IP)
 						{
-							b_output(ping, (unsigned long)strlen(ping));
+							//b_output(ping, (unsigned long)strlen(ping));
 							// Reply to the ping request
 							icmp_packet* tx_icmp = (icmp_packet*)tosend;
 							// Ethernet
