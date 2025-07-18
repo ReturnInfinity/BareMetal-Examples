@@ -1,6 +1,10 @@
 ## 01-hello-world
 
-Compile:
+### Prerequisites:
+
+- `libBareMetal.c` and `libBareMetal.h`. The `build.sh` script will download them.
+
+### Compile:
 ```sh
 gcc -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o hello.o hello.c
 gcc -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o libBareMetal.o libBareMetal.c
