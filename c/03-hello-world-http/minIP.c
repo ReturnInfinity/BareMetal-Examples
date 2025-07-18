@@ -1,15 +1,9 @@
 /* minIP */
 
-#define __USE_MISC
+//#define __USE_MISC
 
 /* Global Includes */
 #include "libBareMetal.h"
-
-/* Typedefs */
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned int u32;
-typedef unsigned long long u64;
 
 /* Global functions */
 u16 checksum(u8* data, u16 bytes);
@@ -53,9 +47,7 @@ u8 src_GW[4] = {0, 0, 0, 0};
 u8 dst_IP[4] = {0, 0, 0, 0};
 unsigned char buffer[ETH_FRAME_LEN];
 unsigned char tosend[ETH_FRAME_LEN];
-int s; // Socket variable
 int running = 1, c, recv_packet_len;
-unsigned int tint, tint0, tint1, tint2, tint3;
 
 /* Global structs */
 #pragma pack(1)
@@ -132,27 +124,14 @@ const char webpage[] =
 "<html>\n"
 "\t<head>\n"
 "\t\t<title>minIP</title>\n"
-"\t\t<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css\">\n"
-"\t\t<link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>\n"
-"\t\t<style>\n"
-"\t\t\tbody, h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {\n"
-"\t\t\t\tfont-family: \"Avenir Next\", \"Roboto\", sans-serif;\n"
-"\t\t\t\tline-height: 1.5;\n"
-"\t\t\t}\n"
-"\t\t</style>\n"
 "\t</head>\n"
 "\t<body>\n"
-"\t\t<div class=\"container\">\n"
-"\t\t\t<p />\n"
-"\t\t\t<h1>Hello, from minIP!</h1>\n"
-"\t\t\t<h3><a href=\"https://github.com/IanSeyler/minIP/\">minIP on GitHub</a></h3>\n"
-"\t\t\t<p>minIP is a very tiny TCP/IP stack implementation in C.</p>\n"
-"\t\t\t<p>It cointains just enough code to serve this webpage.</p>\n"
-"\t\t</div>\n"
+"\t\t\t<h1>Hello world, from minIP!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.7.0 (2023 11 11)\n";
-
+const char version_string[] = "minIP v0.8.0 (2025 07 18)\n";
+const char arp[] = "arp\n";
+const char ping[] = "ping\n";
 
 /* Main code */
 int main()
