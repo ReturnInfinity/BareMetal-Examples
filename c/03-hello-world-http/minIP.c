@@ -45,7 +45,9 @@ u8 src_IP[4] = {0, 0, 0, 0};
 u8 src_SN[4] = {0, 0, 0, 0};
 u8 src_GW[4] = {0, 0, 0, 0};
 u8 dst_IP[4] = {0, 0, 0, 0};
-unsigned char buffer[ETH_FRAME_LEN];
+//unsigned char buffer[ETH_FRAME_LEN];
+unsigned char *buffer = (unsigned char *)0x11C000;
+//buffer = (unsigned char*)0x11C000;
 unsigned char tosend[ETH_FRAME_LEN];
 int running = 1, c, recv_packet_len;
 
@@ -132,6 +134,8 @@ const char webpage[] =
 const char version_string[] = "minIP v0.8.0 (2025 07 18)\n";
 const char arp[] = "arp\n";
 const char ping[] = "ping\n";
+const char ipv4[] = "ipv4\n";
+const char dot[] = ".";
 
 /* Main code */
 int main()
@@ -158,18 +162,17 @@ int main()
 
 		if (recv_packet_len > 0) // Make sure we received a packet
 		{
+			b_output(dot, (unsigned long)strlen(dot)); // display a dot when there is a packet
 			memset(tosend, 0, ETH_FRAME_LEN); // clear the send buffer
 			if (swap16(rx->type) == ETHERTYPE_ARP)
 			{
+				b_output(arp, (unsigned long)strlen(arp));
 				arp_packet* rx_arp = (arp_packet*)buffer;
 				if (swap16(rx_arp->opcode) == ARP_REQUEST)
 				{
-					b_output(arp, (unsigned long)strlen(arp));
+
 					if (*(u32*)rx_arp->target_ip == *(u32*)src_IP)
 					{
-						#if defined(LINUX)
-						printf("ARP Response - Sent\n");
-						#endif
 						arp_packet* tx_arp = (arp_packet*)tosend;
 						// Ethernet
 						memcpy(tx_arp->ethernet.dest_mac, rx_arp->sender_mac, 6);
@@ -196,6 +199,7 @@ int main()
 			}
 			else if (swap16(rx->type) == ETHERTYPE_IPv4)
 			{
+				b_output(ipv4, (unsigned long)strlen(ipv4));
 				ipv4_packet* rx_ipv4 = (ipv4_packet*)buffer;
 				if(rx_ipv4->protocol == PROTOCOL_IP_ICMP)
 				{
