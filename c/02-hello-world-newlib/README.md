@@ -1,5 +1,9 @@
 ## 02-hello-world-newlib
 
+### Description:
+
+A C example that outputs text via a standard C function.
+
 ### Prerequisites:
 
 - Build [newlib4 for BareMetal](https://github.com/ReturnInfinity/BareMetal-newlib4/)

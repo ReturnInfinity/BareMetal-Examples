@@ -1,5 +1,9 @@
 ## 01-hello-world
 
+### Description:
+
+A simple C example that calls the kernel output function directly.
+
 ### Prerequisites:
 
 - `libBareMetal.c` and `libBareMetal.h`. The `build.sh` script will download them.
