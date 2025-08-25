@@ -1,7 +1,5 @@
 /* minIP */
 
-//#define __USE_MISC
-
 /* Global Includes */
 #include "libBareMetal.h"
 
@@ -17,6 +15,7 @@ u32 swap32(u32 in);
 void* memset(void* s, int c, int n);
 void* memcpy(void* d, const void* s, int n);
 int strlen(const char* s);
+char* b_to_s(char* buffer, unsigned char byte);
 
 /* Global defines */
 #undef ETH_FRAME_LEN
@@ -45,6 +44,8 @@ u8 src_IP[4] = {0, 0, 0, 0};
 u8 src_SN[4] = {0, 0, 0, 0};
 u8 src_GW[4] = {0, 0, 0, 0};
 u8 dst_IP[4] = {0, 0, 0, 0};
+u8 dhcpdst[4] = {255, 255, 255, 255};
+u8 dhcpsrc[4] = {0, 0, 0, 0};
 //unsigned char buffer[ETH_FRAME_LEN];
 unsigned char *buffer = (unsigned char *)0x11C000;
 //buffer = (unsigned char*)0x11C000;
@@ -131,11 +132,12 @@ const char webpage[] =
 "\t\t\t<h1>Hello world, from minIP!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.8.0 (2025 07 18)\n";
+const char version_string[] = "minIP v0.9.0 (2025 08 24)\n";
 const char arp[] = "arp\n";
 const char ping[] = "ping\n";
 const char ipv4[] = "ipv4\n";
 const char dot[] = ".";
+char tstring[] = "xxx";
 
 /* Main code */
 int main()
@@ -455,6 +457,176 @@ int net_init()
 	src_MAC[3] = os_MAC[3];
 	src_MAC[4] = os_MAC[4];
 	src_MAC[5] = os_MAC[5];
+
+	// Send a DHCP Discover packet
+	udp_packet* tx_udp = (udp_packet*)tosend;
+	memset(tosend, 0, 1500);
+	// Ethernet
+	memcpy(tx_udp->ipv4.ethernet.dest_mac, dst_broadcast, 6);
+	memcpy(tx_udp->ipv4.ethernet.src_mac, src_MAC, 6);
+	tx_udp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+	// IPv4
+	tx_udp->ipv4.version = 0x45;
+	tx_udp->ipv4.dsf = 0;
+	tx_udp->ipv4.total_length = swap16(312);
+	tx_udp->ipv4.id = 0;
+	tx_udp->ipv4.flags = swap16(0x4000);
+	tx_udp->ipv4.ttl = 0x40;
+	tx_udp->ipv4.protocol = 0x11;
+	tx_udp->ipv4.checksum = 0;
+	memcpy(tx_udp->ipv4.src_ip, dhcpsrc, 4);
+	memcpy(tx_udp->ipv4.dest_ip, dhcpdst, 4);
+	tx_udp->ipv4.checksum = checksum(&tosend[14], 20);
+	// UDP
+	tx_udp->src_port = swap16(68);
+	tx_udp->dest_port = swap16(67);
+	tx_udp->length = swap16(292);
+	tx_udp->checksum = 0;
+//	tx_udp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
+    // DHCP
+    tosend[42] = 0x01;
+    tosend[43] = 0x01;
+    tosend[44] = 0x06;
+    tosend[45] = 0x00;
+    tosend[46] = 0x35;
+    tosend[47] = 0xBA;
+    tosend[48] = 0x16;
+    tosend[49] = 0x81;
+    memcpy(&tosend[70], src_MAC, 6);
+    tosend[278] = 0x63;
+    tosend[279] = 0x82;
+    tosend[280] = 0x53;
+    tosend[281] = 0x63;
+
+    tosend[282] = 0x35; // message type
+    tosend[283] = 0x01; // length
+    tosend[284] = 0x01; // discover
+
+    tosend[285] = 0x3d; // client id
+    tosend[286] = 0x07; // length
+    tosend[287] = 0x01;
+    memcpy(&tosend[288], src_MAC, 6);
+    tosend[294] = 0x37; // Parameter Request List
+    tosend[295] = 0x11; // Length
+    tosend[296] = 0x01; // Subnet Mask
+    tosend[297] = 0x02; // Time Offset
+    tosend[298] = 0x06; // Domain Name Server
+    tosend[299] = 0x0c; // Hostnametosend[325] = 0xFF; // End
+    tosend[300] = 0x0f; // Domain Name
+    tosend[301] = 0x1a; // Interface MTU
+    tosend[302] = 0x1c; // Broadcast Address
+    tosend[303] = 0x79;
+    tosend[304] = 0x03; // Router
+    tosend[305] = 0x21; // Static Route
+    tosend[306] = 0x28;
+    tosend[307] = 0x29;
+    tosend[308] = 0x2a;
+    tosend[309] = 0x77;
+    tosend[310] = 0xf9;
+    tosend[311] = 0xfc;
+    tosend[312] = 0x11; // Root Path
+    tosend[313] = 0x39; // Maximum DHCP Message Size
+    tosend[314] = 0x02; // Length
+    tosend[315] = 0x02; // Size (0x240 - 576 bytes)
+    tosend[316] = 0x40;
+    tosend[317] = 0x0c; // Host Name
+    tosend[318] = 0x06; // Length
+    tosend[319] = 'b';
+    tosend[320] = 'm';
+    tosend[321] = 'e';
+    tosend[322] = 't';
+    tosend[323] = 'a';
+    tosend[324] = 'l';
+    tosend[325] = 0xFF; // End
+
+	// Send the reply
+	net_send(tosend, 326);
+	b_output("DHCP Disc\n", 10);
+
+	// Wait for a DHCP Offer Packet
+	int dhcp = 0;
+	while (dhcp == 0)
+	{
+	    recv_packet_len = net_recv(buffer);
+		eth_header* rx = (eth_header*)buffer;
+		if (swap16(rx->type) == ETHERTYPE_IPv4)
+		{
+		    udp_packet* rx_udp = (udp_packet*)buffer;
+		    if (swap16(rx_udp->dest_port) == 68)
+			{
+			    src_IP[0] = buffer[58];
+				src_IP[1] = buffer[59];
+				src_IP[2] = buffer[60];
+				src_IP[3] = buffer[61];
+			//	src_SN[0] = 255;
+			//	src_SN[1] = 255;
+			//	src_SN[2] = 255;
+			//	src_SN[3] = 0;
+			//	src_GW[0] = 192;
+			//	src_GW[1] = 168;
+			//	src_GW[2] = 4;
+			//	src_GW[3] = 1;
+			    dhcp = 1;
+				b_output("DHCP Offr - ", 12);
+				b_to_s(tstring, buffer[58]);
+				b_output(tstring, (unsigned long)strlen(tstring));
+				b_output(".", 1);
+				b_to_s(tstring, buffer[59]);
+				b_output(tstring, (unsigned long)strlen(tstring));
+				b_output(".", 1);
+				b_to_s(tstring, buffer[60]);
+				b_output(tstring, (unsigned long)strlen(tstring));
+				b_output(".", 1);
+				b_to_s(tstring, buffer[61]);
+				b_output(tstring, (unsigned long)strlen(tstring));
+				b_output("\n", 1);
+			}
+		}
+	}
+
+	if (dhcp == 1)
+	{
+	    // Send a DHCP Request packet
+		tx_udp->ipv4.total_length = swap16(324);
+		tx_udp->ipv4.checksum = 0;
+		tx_udp->ipv4.checksum = checksum(&tosend[14], 20);
+		tx_udp->length = swap16(304);
+		tx_udp->checksum = 0;
+		tosend[282] = 0x35; // message type
+        tosend[283] = 0x01; // length
+        tosend[284] = 0x03; // request
+
+        tosend[317] = 0x32; // requested IP Address
+        tosend[318] = 0x04; // length
+        tosend[319] = buffer[58];
+        tosend[320] = buffer[59];
+        tosend[321] = buffer[60];
+        tosend[322] = buffer[61];
+
+        tosend[323] = 0x36; // dhcp server identifier
+        tosend[324] = 0x04; // length
+        tosend[325] = buffer[26];
+        tosend[326] = buffer[27];
+        tosend[327] = buffer[28];
+        tosend[328] = buffer[29];
+
+        tosend[329] = 0x0c; // Host Name
+        tosend[330] = 0x06; // Length
+        tosend[331] = 'b';
+        tosend[332] = 'm';
+        tosend[333] = 'e';
+        tosend[334] = 't';
+        tosend[335] = 'a';
+        tosend[336] = 'l';
+        tosend[337] = 0xFF; // End
+
+        // Send the reply
+        net_send(tosend, 338);
+        b_output("DHCP Requ\n", 10);
+	}
+
+	// Ignore the DHCP ACK for now.
+
 	return 0;
 }
 
@@ -542,5 +714,39 @@ int strlen(const char* s)
 	return r;
 }
 
+char* b_to_s(char* buffer, unsigned char byte)
+{
+    int i = 0;
+    int temp = byte;
+    char digits[4];
+    int digit_count = 0;
+
+    // Check if the byte was 0 and set the string if so
+    if (byte == 0)
+    {
+        buffer[0] = '0';
+        buffer[1] = '\0';
+        return buffer;
+    }
+
+    // Extract the individual digits
+    while (temp > 0)
+    {
+        digits[digit_count] = (temp % 10) + '0';
+        temp /= 10;
+        digit_count++;
+    }
+
+    // Put digits in the correct order
+    for (i=0; i < digit_count; i++)
+    {
+        buffer[i] = digits[digit_count - 1 - i];
+    }
+
+    // Null terminate the string
+    buffer[digit_count] = '\0';
+
+    return buffer;
+}
 
 /* EOF */
