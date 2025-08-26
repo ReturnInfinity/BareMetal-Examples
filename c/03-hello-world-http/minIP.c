@@ -483,61 +483,61 @@ int net_init()
 	tx_udp->length = swap16(292);
 	tx_udp->checksum = 0;
 //	tx_udp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
-    // DHCP
-    tosend[42] = 0x01;
-    tosend[43] = 0x01;
-    tosend[44] = 0x06;
-    tosend[45] = 0x00;
-    tosend[46] = 0x35;
-    tosend[47] = 0xBA;
-    tosend[48] = 0x16;
-    tosend[49] = 0x81;
-    memcpy(&tosend[70], src_MAC, 6);
-    tosend[278] = 0x63;
-    tosend[279] = 0x82;
-    tosend[280] = 0x53;
-    tosend[281] = 0x63;
+	// DHCP
+	tosend[42] = 0x01;
+	tosend[43] = 0x01;
+	tosend[44] = 0x06;
+	tosend[45] = 0x00;
+	tosend[46] = 0x35;
+	tosend[47] = 0xBA;
+	tosend[48] = 0x16;
+	tosend[49] = 0x81;
+	memcpy(&tosend[70], src_MAC, 6);
+	tosend[278] = 0x63;
+	tosend[279] = 0x82;
+	tosend[280] = 0x53;
+	tosend[281] = 0x63;
 
-    tosend[282] = 0x35; // message type
-    tosend[283] = 0x01; // length
-    tosend[284] = 0x01; // discover
+	tosend[282] = 0x35; // message type
+	tosend[283] = 0x01; // length
+	tosend[284] = 0x01; // discover
 
-    tosend[285] = 0x3d; // client id
-    tosend[286] = 0x07; // length
-    tosend[287] = 0x01;
-    memcpy(&tosend[288], src_MAC, 6);
-    tosend[294] = 0x37; // Parameter Request List
-    tosend[295] = 0x11; // Length
-    tosend[296] = 0x01; // Subnet Mask
-    tosend[297] = 0x02; // Time Offset
-    tosend[298] = 0x06; // Domain Name Server
-    tosend[299] = 0x0c; // Hostnametosend[325] = 0xFF; // End
-    tosend[300] = 0x0f; // Domain Name
-    tosend[301] = 0x1a; // Interface MTU
-    tosend[302] = 0x1c; // Broadcast Address
-    tosend[303] = 0x79;
-    tosend[304] = 0x03; // Router
-    tosend[305] = 0x21; // Static Route
-    tosend[306] = 0x28;
-    tosend[307] = 0x29;
-    tosend[308] = 0x2a;
-    tosend[309] = 0x77;
-    tosend[310] = 0xf9;
-    tosend[311] = 0xfc;
-    tosend[312] = 0x11; // Root Path
-    tosend[313] = 0x39; // Maximum DHCP Message Size
-    tosend[314] = 0x02; // Length
-    tosend[315] = 0x02; // Size (0x240 - 576 bytes)
-    tosend[316] = 0x40;
-    tosend[317] = 0x0c; // Host Name
-    tosend[318] = 0x06; // Length
-    tosend[319] = 'b';
-    tosend[320] = 'm';
-    tosend[321] = 'e';
-    tosend[322] = 't';
-    tosend[323] = 'a';
-    tosend[324] = 'l';
-    tosend[325] = 0xFF; // End
+	tosend[285] = 0x3d; // client id
+	tosend[286] = 0x07; // length
+	tosend[287] = 0x01;
+	memcpy(&tosend[288], src_MAC, 6);
+	tosend[294] = 0x37; // Parameter Request List
+	tosend[295] = 0x11; // Length
+	tosend[296] = 0x01; // Subnet Mask
+	tosend[297] = 0x02; // Time Offset
+	tosend[298] = 0x06; // Domain Name Server
+	tosend[299] = 0x0c; // Hostnametosend[325] = 0xFF; // End
+	tosend[300] = 0x0f; // Domain Name
+	tosend[301] = 0x1a; // Interface MTU
+	tosend[302] = 0x1c; // Broadcast Address
+	tosend[303] = 0x79;
+	tosend[304] = 0x03; // Router
+	tosend[305] = 0x21; // Static Route
+	tosend[306] = 0x28;
+	tosend[307] = 0x29;
+	tosend[308] = 0x2a;
+	tosend[309] = 0x77;
+	tosend[310] = 0xf9;
+	tosend[311] = 0xfc;
+	tosend[312] = 0x11; // Root Path
+	tosend[313] = 0x39; // Maximum DHCP Message Size
+	tosend[314] = 0x02; // Length
+	tosend[315] = 0x02; // Size (0x240 - 576 bytes)
+	tosend[316] = 0x40;
+	tosend[317] = 0x0c; // Host Name
+	tosend[318] = 0x06; // Length
+	tosend[319] = 'b';
+	tosend[320] = 'm';
+	tosend[321] = 'e';
+	tosend[322] = 't';
+	tosend[323] = 'a';
+	tosend[324] = 'l';
+	tosend[325] = 0xFF; // End
 
 	// Send the reply
 	net_send(tosend, 326);
@@ -547,38 +547,80 @@ int net_init()
 	int dhcp = 0;
 	while (dhcp == 0)
 	{
-	    recv_packet_len = net_recv(buffer);
+		recv_packet_len = net_recv(buffer);
 		eth_header* rx = (eth_header*)buffer;
 		if (swap16(rx->type) == ETHERTYPE_IPv4)
 		{
-		    udp_packet* rx_udp = (udp_packet*)buffer;
-		    if (swap16(rx_udp->dest_port) == 68)
+			udp_packet* rx_udp = (udp_packet*)buffer;
+			if (swap16(rx_udp->dest_port) == 68)
 			{
-			    src_IP[0] = buffer[58];
+				unsigned int index = 282;
+				u8 tval = 0, tlen = 0;
+				src_IP[0] = buffer[58];
 				src_IP[1] = buffer[59];
 				src_IP[2] = buffer[60];
 				src_IP[3] = buffer[61];
-			//	src_SN[0] = 255;
-			//	src_SN[1] = 255;
-			//	src_SN[2] = 255;
-			//	src_SN[3] = 0;
-			//	src_GW[0] = 192;
-			//	src_GW[1] = 168;
-			//	src_GW[2] = 4;
-			//	src_GW[3] = 1;
-			    dhcp = 1;
-				b_output("DHCP Offr - ", 12);
-				b_to_s(tstring, buffer[58]);
+				dhcp = 1;
+				b_output("DHCP Offr - IP: ", 16);
+				b_to_s(tstring, src_IP[0]);
 				b_output(tstring, (unsigned long)strlen(tstring));
 				b_output(".", 1);
-				b_to_s(tstring, buffer[59]);
+				b_to_s(tstring, src_IP[1]);
 				b_output(tstring, (unsigned long)strlen(tstring));
 				b_output(".", 1);
-				b_to_s(tstring, buffer[60]);
+				b_to_s(tstring, src_IP[2]);
 				b_output(tstring, (unsigned long)strlen(tstring));
 				b_output(".", 1);
-				b_to_s(tstring, buffer[61]);
+				b_to_s(tstring, src_IP[3]);
 				b_output(tstring, (unsigned long)strlen(tstring));
+
+				// Parse options
+				while (1)
+				{
+					tval = buffer[index];
+					if (tval == 0xFF)
+						break;
+					tlen = buffer[index+1];
+					if (tval == 0x01) // Subnet
+					{
+						src_SN[0] = buffer[index+2];
+						src_SN[1] = buffer[index+3];
+						src_SN[2] = buffer[index+4];
+						src_SN[3] = buffer[index+5];
+						b_output(", SN: ", 6);
+						b_to_s(tstring, src_SN[0]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+						b_output(".", 1);
+						b_to_s(tstring, src_SN[1]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+						b_output(".", 1);
+						b_to_s(tstring, src_SN[2]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+						b_output(".", 1);
+						b_to_s(tstring, src_SN[3]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+					}
+					else if (tval == 0x03) // Router
+					{
+						src_GW[0] = buffer[index+2];
+						src_GW[1] = buffer[index+3];
+						src_GW[2] = buffer[index+4];
+						src_GW[3] = buffer[index+5];
+						b_output(", GW: ", 6);
+						b_to_s(tstring, src_GW[0]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+						b_output(".", 1);
+						b_to_s(tstring, src_GW[1]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+						b_output(".", 1);
+						b_to_s(tstring, src_GW[2]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+						b_output(".", 1);
+						b_to_s(tstring, src_GW[3]);
+						b_output(tstring, (unsigned long)strlen(tstring));
+					}
+					index = index + tlen + 2;
+				}
 				b_output("\n", 1);
 			}
 		}
@@ -586,43 +628,43 @@ int net_init()
 
 	if (dhcp == 1)
 	{
-	    // Send a DHCP Request packet
+		// Send a DHCP Request packet
 		tx_udp->ipv4.total_length = swap16(324);
 		tx_udp->ipv4.checksum = 0;
 		tx_udp->ipv4.checksum = checksum(&tosend[14], 20);
 		tx_udp->length = swap16(304);
 		tx_udp->checksum = 0;
 		tosend[282] = 0x35; // message type
-        tosend[283] = 0x01; // length
-        tosend[284] = 0x03; // request
+		tosend[283] = 0x01; // length
+		tosend[284] = 0x03; // request
 
-        tosend[317] = 0x32; // requested IP Address
-        tosend[318] = 0x04; // length
-        tosend[319] = buffer[58];
-        tosend[320] = buffer[59];
-        tosend[321] = buffer[60];
-        tosend[322] = buffer[61];
+		tosend[317] = 0x32; // requested IP Address
+		tosend[318] = 0x04; // length
+		tosend[319] = buffer[58];
+		tosend[320] = buffer[59];
+		tosend[321] = buffer[60];
+		tosend[322] = buffer[61];
 
-        tosend[323] = 0x36; // dhcp server identifier
-        tosend[324] = 0x04; // length
-        tosend[325] = buffer[26];
-        tosend[326] = buffer[27];
-        tosend[327] = buffer[28];
-        tosend[328] = buffer[29];
+		tosend[323] = 0x36; // dhcp server identifier
+		tosend[324] = 0x04; // length
+		tosend[325] = buffer[26];
+		tosend[326] = buffer[27];
+		tosend[327] = buffer[28];
+		tosend[328] = buffer[29];
 
-        tosend[329] = 0x0c; // Host Name
-        tosend[330] = 0x06; // Length
-        tosend[331] = 'b';
-        tosend[332] = 'm';
-        tosend[333] = 'e';
-        tosend[334] = 't';
-        tosend[335] = 'a';
-        tosend[336] = 'l';
-        tosend[337] = 0xFF; // End
+		tosend[329] = 0x0c; // Host Name
+		tosend[330] = 0x06; // Length
+		tosend[331] = 'b';
+		tosend[332] = 'm';
+		tosend[333] = 'e';
+		tosend[334] = 't';
+		tosend[335] = 'a';
+		tosend[336] = 'l';
+		tosend[337] = 0xFF; // End
 
-        // Send the reply
-        net_send(tosend, 338);
-        b_output("DHCP Requ\n", 10);
+		// Send the reply
+		net_send(tosend, 338);
+		b_output("DHCP Requ\n", 10);
 	}
 
 	// Ignore the DHCP ACK for now.
