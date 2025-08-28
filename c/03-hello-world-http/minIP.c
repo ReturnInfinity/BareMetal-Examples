@@ -132,7 +132,7 @@ const char webpage[] =
 "\t\t\t<h1>Hello world, from minIP!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.9.0 (2025 08 24)\n";
+const char version_string[] = "minIP v0.9.0 (2025 08 28)\n";
 const char arp[] = "arp\n";
 const char ping[] = "ping\n";
 const char ipv4[] = "ipv4\n";
@@ -253,7 +253,7 @@ int main()
 				else if(rx_ipv4->protocol == PROTOCOL_IP_TCP)
 				{
 					tcp_packet* rx_tcp = (tcp_packet*)buffer;
-					if (rx_tcp->flags == TCP_SYN)
+					if (rx_tcp->flags == TCP_SYN && *(u32*)rx_tcp->ipv4.dest_ip == *(u32*)src_IP && rx_tcp->dest_port == swap16(80))
 					{
 						tcp_packet* tx_tcp = (tcp_packet*)tosend;
 						memcpy((void*)tosend, (void*)buffer, ETH_FRAME_LEN); // make a copy of the original frame
@@ -291,7 +291,7 @@ int main()
 					{
 						// Ignore these for now.
 					}
-					else if (rx_tcp->flags == (TCP_PSH|TCP_ACK))
+					else if (rx_tcp->flags == (TCP_PSH|TCP_ACK) && *(u32*)rx_tcp->ipv4.dest_ip == *(u32*)src_IP && rx_tcp->dest_port == swap16(80))
 					{
 						tcp_packet* tx_tcp = (tcp_packet*)tosend;
 						memcpy((void*)tosend, (void*)buffer, ETH_FRAME_LEN); // make a copy of the original frame
