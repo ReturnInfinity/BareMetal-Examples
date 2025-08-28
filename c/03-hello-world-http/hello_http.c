@@ -120,7 +120,7 @@ typedef struct tcp_packet {
 /* Default HTTP page with HTTP headers */
 const char webpage[] =
 "HTTP/1.0 200 OK\n"
-"Server: minIP\n"
+"Server: BareMetal\n"
 "Content-type: text/html\n"
 "\n"
 "<!DOCTYPE html>\n"
@@ -129,7 +129,7 @@ const char webpage[] =
 "\t\t<title>minIP</title>\n"
 "\t</head>\n"
 "\t<body>\n"
-"\t\t\t<h1>Hello world, from minIP!</h1>\n"
+"\t\t<h1>Hello world, from BareMetal!</h1>\n"
 "\t</body>\n"
 "</html>\n";
 const char version_string[] = "minIP v0.9.0 (2025 08 28)\n";
@@ -172,7 +172,6 @@ int main()
 				arp_packet* rx_arp = (arp_packet*)buffer;
 				if (swap16(rx_arp->opcode) == ARP_REQUEST)
 				{
-
 					if (*(u32*)rx_arp->target_ip == *(u32*)src_IP)
 					{
 						arp_packet* tx_arp = (arp_packet*)tosend;
@@ -511,19 +510,19 @@ int net_init()
 	tosend[296] = 0x01; // Subnet Mask
 	tosend[297] = 0x02; // Time Offset
 	tosend[298] = 0x06; // Domain Name Server
-	tosend[299] = 0x0c; // Hostnametosend[325] = 0xFF; // End
+	tosend[299] = 0x0c; // Host Name
 	tosend[300] = 0x0f; // Domain Name
 	tosend[301] = 0x1a; // Interface MTU
 	tosend[302] = 0x1c; // Broadcast Address
-	tosend[303] = 0x79;
+	tosend[303] = 0x79; // Classless Static Route
 	tosend[304] = 0x03; // Router
 	tosend[305] = 0x21; // Static Route
-	tosend[306] = 0x28;
-	tosend[307] = 0x29;
-	tosend[308] = 0x2a;
-	tosend[309] = 0x77;
-	tosend[310] = 0xf9;
-	tosend[311] = 0xfc;
+	tosend[306] = 0x28; // Network Information Service Domain
+	tosend[307] = 0x29; // Network Information Service Servers
+	tosend[308] = 0x2a; // Network Time Protocol Servers
+	tosend[309] = 0x77; // Domain Search
+	tosend[310] = 0xf9; // Private/Classless Static Route
+	tosend[311] = 0xfc; // Private/Proxy Autodiscovery
 	tosend[312] = 0x11; // Root Path
 	tosend[313] = 0x39; // Maximum DHCP Message Size
 	tosend[314] = 0x02; // Length

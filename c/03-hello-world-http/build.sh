@@ -12,6 +12,6 @@ else
 fi
 
 gcc $CFLAGS -o crt0.o crt0.c
-gcc $CFLAGS -o minIP.o minIP.c
+gcc $CFLAGS -o hello_http.o hello_http.c
 gcc $CFLAGS -o libBareMetal.o libBareMetal.c
-ld -T c.ld -o minIP.app crt0.o minIP.o libBareMetal.o
+ld -T c.ld -o http.app crt0.o hello_http.o libBareMetal.o
