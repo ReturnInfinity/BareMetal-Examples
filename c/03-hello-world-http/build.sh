@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CFLAGS="-c -m64 -nostdlib -nostartfiles -nodefaultlibs -ffreestanding -falign-functions=16 -fomit-frame-pointer -mno-red-zone -fno-builtin -fno-stack-protector"
+CFLAGS="-c -m64 -nostdlib -nostartfiles -nodefaultlibs -ffreestanding -falign-functions=16 -fomit-frame-pointer -mno-red-zone -fno-builtin -fno-stack-protector -Os -ffunction-sections -fdata-sections"
 
 rm -f libBareMetal.*
 if [ -x "$(command -v curl)" ]; then
