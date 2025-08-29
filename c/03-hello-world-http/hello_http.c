@@ -530,7 +530,7 @@ int net_init()
 
 	// Send the reply
 	net_send(tosend, 326);
-	b_output("DHCP Disc\n", 10);
+//	b_output("DHCP Disc\n", 10);
 
 	// Wait for a DHCP Offer Packet
 	int dhcp = 0;
@@ -608,7 +608,7 @@ int net_init()
 
 		// Send the reply
 		net_send(tosend, 338);
-		b_output("DHCP Requ\n", 10);
+//		b_output("DHCP Requ\n", 10);
 	}
 
 	// Ignore the DHCP ACK for now.
