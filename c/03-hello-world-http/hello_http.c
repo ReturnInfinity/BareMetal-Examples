@@ -1,4 +1,5 @@
-/* minIP */
+/* hello_http */
+/* Based off minIP - https://github.com/IanSeyler/minIP */
 
 /* Global Includes */
 #include "libBareMetal.h"
@@ -10,14 +11,15 @@ int net_init();
 int net_exit();
 int net_send(unsigned char* data, unsigned int bytes);
 int net_recv(unsigned char* data);
-u16 swap16(u16 in);
-u32 swap32(u32 in);
 void* memset(void* s, int c, int n);
 void* memcpy(void* d, const void* s, int n);
 int strlen(const char* s);
 char* b_to_s(char* buffer, unsigned char byte);
+void display_ip(u8* ip);
 
 /* Global defines */
+#define swap16(x) __builtin_bswap16(x)
+#define swap32(x) __builtin_bswap32(x)
 #undef ETH_FRAME_LEN
 #define ETH_FRAME_LEN 1518
 #define ETHERTYPE_ARP 0x0806
@@ -46,9 +48,7 @@ u8 src_GW[4] = {0, 0, 0, 0};
 u8 dst_IP[4] = {0, 0, 0, 0};
 u8 dhcpdst[4] = {255, 255, 255, 255};
 u8 dhcpsrc[4] = {0, 0, 0, 0};
-//unsigned char buffer[ETH_FRAME_LEN];
 unsigned char *buffer = (unsigned char *)0x11C000;
-//buffer = (unsigned char*)0x11C000;
 unsigned char tosend[ETH_FRAME_LEN];
 int running = 1, c, recv_packet_len;
 
@@ -126,18 +126,13 @@ const char webpage[] =
 "<!DOCTYPE html>\n"
 "<html>\n"
 "\t<head>\n"
-"\t\t<title>minIP</title>\n"
+"\t\t<title>Hello</title>\n"
 "\t</head>\n"
 "\t<body>\n"
 "\t\t<h1>Hello world, from BareMetal!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.9.0 (2025 08 28)\n";
-const char arp[] = "arp\n";
-const char ping[] = "ping\n";
-const char ipv4[] = "ipv4\n";
-const char dot[] = ".";
-char tstring[] = "xxx";
+const char version_string[] = "minIP v0.9.0 (2025 08 29)\n";
 
 /* Main code */
 int main()
@@ -164,7 +159,7 @@ int main()
 
 		if (recv_packet_len > 0) // Make sure we received a packet
 		{
-			b_output(dot, (unsigned long)strlen(dot)); // display a dot when there is a packet
+			b_output(".", 1); // display a dot when there is a packet
 			memset(tosend, 0, ETH_FRAME_LEN); // clear the send buffer
 			if (swap16(rx->type) == ETHERTYPE_ARP)
 			{
@@ -561,17 +556,7 @@ int net_init()
 				src_IP[3] = buffer[61];
 				dhcp = 1;
 				b_output("DHCP Offr - IP: ", 16);
-				b_to_s(tstring, src_IP[0]);
-				b_output(tstring, (unsigned long)strlen(tstring));
-				b_output(".", 1);
-				b_to_s(tstring, src_IP[1]);
-				b_output(tstring, (unsigned long)strlen(tstring));
-				b_output(".", 1);
-				b_to_s(tstring, src_IP[2]);
-				b_output(tstring, (unsigned long)strlen(tstring));
-				b_output(".", 1);
-				b_to_s(tstring, src_IP[3]);
-				b_output(tstring, (unsigned long)strlen(tstring));
+				display_ip(src_IP);
 
 				// Parse options
 				while (1)
@@ -587,17 +572,7 @@ int net_init()
 						src_SN[2] = buffer[index+4];
 						src_SN[3] = buffer[index+5];
 						b_output(", SN: ", 6);
-						b_to_s(tstring, src_SN[0]);
-						b_output(tstring, (unsigned long)strlen(tstring));
-						b_output(".", 1);
-						b_to_s(tstring, src_SN[1]);
-						b_output(tstring, (unsigned long)strlen(tstring));
-						b_output(".", 1);
-						b_to_s(tstring, src_SN[2]);
-						b_output(tstring, (unsigned long)strlen(tstring));
-						b_output(".", 1);
-						b_to_s(tstring, src_SN[3]);
-						b_output(tstring, (unsigned long)strlen(tstring));
+						display_ip(src_SN);
 					}
 					else if (tval == 0x03) // Router
 					{
@@ -606,17 +581,7 @@ int net_init()
 						src_GW[2] = buffer[index+4];
 						src_GW[3] = buffer[index+5];
 						b_output(", GW: ", 6);
-						b_to_s(tstring, src_GW[0]);
-						b_output(tstring, (unsigned long)strlen(tstring));
-						b_output(".", 1);
-						b_to_s(tstring, src_GW[1]);
-						b_output(tstring, (unsigned long)strlen(tstring));
-						b_output(".", 1);
-						b_to_s(tstring, src_GW[2]);
-						b_output(tstring, (unsigned long)strlen(tstring));
-						b_output(".", 1);
-						b_to_s(tstring, src_GW[3]);
-						b_output(tstring, (unsigned long)strlen(tstring));
+						display_ip(src_GW);
 					}
 					index = index + tlen + 2;
 				}
@@ -698,24 +663,6 @@ int net_recv(unsigned char* data)
 }
 
 
-/* swap16 - Change endianness on a 16-bit value */
-// x86-64 uses little-endian while IP uses big-endian
-u16 swap16(u16 in)
-{
-	u16 out = in<<8 | ((in&0xff00)>>8);
-	return out;
-}
-
-
-/* swap32 - Change endianness on a 32-bit value */
-// x86-64 uses little-endian while IP uses big-endian
-u32 swap32(u32 in)
-{
-	u32 out = in<<24 | ((in&0xff00)<<8) | ((in&0xff0000)>>8) | ((in&0xff000000)>>24);
-	return out;
-}
-
-
 void* memset(void* s, int c, int n)
 {
 	char* _src;
@@ -755,39 +702,57 @@ int strlen(const char* s)
 	return r;
 }
 
+
 char* b_to_s(char* buffer, unsigned char byte)
 {
-    int i = 0;
-    int temp = byte;
-    char digits[4];
-    int digit_count = 0;
+	int i = 0;
+	int temp = byte;
+	char digits[4];
+	int digit_count = 0;
 
-    // Check if the byte was 0 and set the string if so
-    if (byte == 0)
-    {
-        buffer[0] = '0';
-        buffer[1] = '\0';
-        return buffer;
-    }
+	// Check if the byte was 0 and set the string if so
+	if (byte == 0)
+	{
+		buffer[0] = '0';
+		buffer[1] = '\0';
+		return buffer;
+	}
 
-    // Extract the individual digits
-    while (temp > 0)
-    {
-        digits[digit_count] = (temp % 10) + '0';
-        temp /= 10;
-        digit_count++;
-    }
+	// Extract the individual digits
+	while (temp > 0)
+	{
+		digits[digit_count] = (temp % 10) + '0';
+		temp /= 10;
+		digit_count++;
+	}
 
-    // Put digits in the correct order
-    for (i=0; i < digit_count; i++)
-    {
-        buffer[i] = digits[digit_count - 1 - i];
-    }
+	// Put digits in the correct order
+	for (i=0; i < digit_count; i++)
+	{
+		buffer[i] = digits[digit_count - 1 - i];
+	}
 
-    // Null terminate the string
-    buffer[digit_count] = '\0';
+	// Null terminate the string
+	buffer[digit_count] = '\0';
 
-    return buffer;
+	return buffer;
 }
+
+void display_ip(u8* ip)
+{
+	char tstring[] = "xxx";
+	b_to_s(tstring, ip[0]);
+	b_output(tstring, (unsigned long)strlen(tstring));
+	b_output(".", 1);
+	b_to_s(tstring, ip[1]);
+	b_output(tstring, (unsigned long)strlen(tstring));
+	b_output(".", 1);
+	b_to_s(tstring, ip[2]);
+	b_output(tstring, (unsigned long)strlen(tstring));
+	b_output(".", 1);
+	b_to_s(tstring, ip[3]);
+	b_output(tstring, (unsigned long)strlen(tstring));
+}
+
 
 /* EOF */
