@@ -445,12 +445,7 @@ int net_init()
 	/* Populate the MAC Address */
 	/* Pulls the MAC from the OS sys var table... so gross */
 	char * os_MAC = (void*)0x11A008;
-	src_MAC[0] = os_MAC[0];
-	src_MAC[1] = os_MAC[1];
-	src_MAC[2] = os_MAC[2];
-	src_MAC[3] = os_MAC[3];
-	src_MAC[4] = os_MAC[4];
-	src_MAC[5] = os_MAC[5];
+	memcpy(src_MAC, os_MAC, 6); // Copy MAC address
 
 	// Send a DHCP Discover packet
 	udp_packet* tx_udp = (udp_packet*)tosend;
@@ -550,10 +545,7 @@ int net_init()
 			{
 				unsigned int index = 282;
 				u8 tval = 0, tlen = 0;
-				src_IP[0] = buffer[58];
-				src_IP[1] = buffer[59];
-				src_IP[2] = buffer[60];
-				src_IP[3] = buffer[61];
+				memcpy(src_IP, buffer + 58, 4);
 				dhcp = 1;
 				b_output("DHCP Offr - IP: ", 16);
 				display_ip(src_IP);
@@ -567,19 +559,13 @@ int net_init()
 					tlen = buffer[index+1];
 					if (tval == 0x01) // Subnet
 					{
-						src_SN[0] = buffer[index+2];
-						src_SN[1] = buffer[index+3];
-						src_SN[2] = buffer[index+4];
-						src_SN[3] = buffer[index+5];
+						memcpy(src_SN, buffer + index + 2, 4);
 						b_output(", SN: ", 6);
 						display_ip(src_SN);
 					}
 					else if (tval == 0x03) // Router
 					{
-						src_GW[0] = buffer[index+2];
-						src_GW[1] = buffer[index+3];
-						src_GW[2] = buffer[index+4];
-						src_GW[3] = buffer[index+5];
+						memcpy(src_GW, buffer + index + 2, 4);
 						b_output(", GW: ", 6);
 						display_ip(src_GW);
 					}
@@ -604,17 +590,11 @@ int net_init()
 
 		tosend[317] = 0x32; // requested IP Address
 		tosend[318] = 0x04; // length
-		tosend[319] = buffer[58];
-		tosend[320] = buffer[59];
-		tosend[321] = buffer[60];
-		tosend[322] = buffer[61];
+		memcpy(tosend + 319, buffer + 58, 4); // requested IP Address value
 
 		tosend[323] = 0x36; // dhcp server identifier
 		tosend[324] = 0x04; // length
-		tosend[325] = buffer[26];
-		tosend[326] = buffer[27];
-		tosend[327] = buffer[28];
-		tosend[328] = buffer[29];
+		memcpy(tosend + 325, buffer + 26, 4); // dhcp server identifier value
 
 		tosend[329] = 0x0c; // Host Name
 		tosend[330] = 0x06; // Length
