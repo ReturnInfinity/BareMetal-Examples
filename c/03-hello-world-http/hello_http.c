@@ -8,9 +8,6 @@
 u16 checksum(u8* data, u16 bytes);
 u16 checksum_tcp(u8* data, u16 bytes, u16 protocol, u16 length);
 int net_init();
-int net_exit();
-int net_send(unsigned char* data, unsigned int bytes);
-int net_recv(unsigned char* data);
 void* memset(void* s, int c, int n);
 void* memcpy(void* d, const void* s, int n);
 int strlen(const char* s);
@@ -132,7 +129,7 @@ const char webpage[] =
 "\t\t<h1>Hello world, from BareMetal!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.9.0 (2025 08 29)\n";
+const char version_string[] = "minIP v0.9.0 (2025 08 30)\n";
 
 /* Main code */
 int main()
@@ -154,7 +151,7 @@ int main()
 
 	while(running == 1)
 	{
-		recv_packet_len = net_recv(buffer);
+		recv_packet_len = b_net_rx(buffer, 0);
 		eth_header* rx = (eth_header*)buffer;
 
 		if (recv_packet_len > 0) // Make sure we received a packet
@@ -185,7 +182,7 @@ int main()
 						memcpy(tx_arp->target_mac, rx_arp->sender_mac, 6);
 						memcpy(tx_arp->target_ip, rx_arp->sender_ip, 4);
 						// Send the reply
-						net_send(tosend, 42);
+						b_net_tx(tosend, 42, 0);
 					}
 				}
 				else if (buffer[21] == ARP_REPLY)
@@ -232,7 +229,7 @@ int main()
 							memcpy (tx_icmp->data, rx_icmp->data, (swap16(rx_icmp->ipv4.total_length)-20-16)); // IP length - IPv4 header - ICMP header
 							tx_icmp->checksum = checksum(&tosend[34], recv_packet_len-14-20); // Frame length - MAC header - IPv4 header
 							// Send the reply
-							net_send(tosend, recv_packet_len);
+							b_net_tx(tosend, recv_packet_len, 0);
 						}
 					}
 					else if (rx_icmp->type == ICMP_ECHO_REPLY)
@@ -279,7 +276,7 @@ int main()
 						tx_tcp->urg_pointer = rx_tcp->urg_pointer;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], recv_packet_len-34, PROTOCOL_IP_TCP, recv_packet_len-34);
 						// Send the reply
-						net_send(tosend, recv_packet_len);
+						b_net_tx(tosend, recv_packet_len, 0);
 					}
 					else if (rx_tcp->flags == TCP_ACK)
 					{
@@ -317,7 +314,7 @@ int main()
 						tx_tcp->urg_pointer = rx_tcp->urg_pointer;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
 						// Send the reply
-						net_send(tosend, 66);
+						b_net_tx(tosend, 66, 0);
 						// Send the webpage
 						tx_tcp->ipv4.total_length = swap16(52+strlen(webpage));
 						tx_tcp->ipv4.checksum = 0;
@@ -326,7 +323,7 @@ int main()
 						tx_tcp->checksum = 0;
 						memcpy((char*)tosend+66, (char*)webpage, strlen(webpage));
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32+strlen(webpage), PROTOCOL_IP_TCP, 32+strlen(webpage));
-						net_send(tosend, 66+strlen(webpage));
+						b_net_tx(tosend, 66+strlen(webpage), 0);
 						// Disconnect the client
 						tx_tcp->ipv4.total_length = swap16(52);
 						tx_tcp->ipv4.checksum = 0;
@@ -335,7 +332,7 @@ int main()
 						tx_tcp->flags = TCP_FIN|TCP_ACK;
 						tx_tcp->checksum = 0;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
-						net_send(tosend, 66);
+						b_net_tx(tosend, 66, 0);
 					}
 					else if (rx_tcp->flags == (TCP_FIN|TCP_ACK))
 					{
@@ -369,7 +366,7 @@ int main()
 						tx_tcp->urg_pointer = rx_tcp->urg_pointer;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
 						// Send the reply
-						net_send(tosend, 66);
+						b_net_tx(tosend, 66, 0);
 					}
 				}
 				else if (rx_ipv4->protocol == PROTOCOL_IP_UDP)
@@ -389,7 +386,6 @@ int main()
 	}
 
 	b_output("\n", 1);
-	net_exit();
 	return 0;
 }
 
@@ -482,6 +478,7 @@ int net_init()
 	tosend[48] = 0x16;
 	tosend[49] = 0x81;
 	memcpy(&tosend[70], src_MAC, 6);
+	// DHCP magic value
 	tosend[278] = 0x63;
 	tosend[279] = 0x82;
 	tosend[280] = 0x53;
@@ -529,14 +526,13 @@ int net_init()
 	tosend[325] = 0xFF; // End
 
 	// Send the reply
-	net_send(tosend, 326);
-//	b_output("DHCP Disc\n", 10);
+	b_net_tx(tosend, 326, 0);
 
 	// Wait for a DHCP Offer Packet
 	int dhcp = 0;
 	while (dhcp == 0)
 	{
-		recv_packet_len = net_recv(buffer);
+		recv_packet_len = b_net_rx(buffer, 0);
 		eth_header* rx = (eth_header*)buffer;
 		if (swap16(rx->type) == ETHERTYPE_IPv4)
 		{
@@ -547,7 +543,7 @@ int net_init()
 				u8 tval = 0, tlen = 0;
 				memcpy(src_IP, buffer + 58, 4);
 				dhcp = 1;
-				b_output("DHCP Offr - IP: ", 16);
+				b_output("DHCP - IP: ", 16);
 				display_ip(src_IP);
 
 				// Parse options
@@ -607,39 +603,12 @@ int net_init()
 		tosend[337] = 0xFF; // End
 
 		// Send the reply
-		net_send(tosend, 338);
-//		b_output("DHCP Requ\n", 10);
+		b_net_tx(tosend, 338, 0);
 	}
 
 	// Ignore the DHCP ACK for now.
 
 	return 0;
-}
-
-
-/* net_exit */
-int net_exit()
-{
-	return 0;
-}
-
-
-/* net_send - Send a raw Ethernet packet */
-// Wrapper for kernel send function
-// Returns number of bytes sent
-int net_send(unsigned char* data, unsigned int bytes)
-{
-	b_net_tx(data, bytes, 0);
-	return bytes;
-}
-
-
-/* net_recv - Receive a raw Ethernet packet */
-// Wrapper for kernel recv function
-// Returns number of bytes read
-int net_recv(unsigned char* data)
-{
-	return b_net_rx(data, 0);
 }
 
 
@@ -649,7 +618,8 @@ void* memset(void* s, int c, int n)
 
 	_src = (char*)s;
 
-	while (n--) {
+	while (n--)
+	{
 		*_src++ = c;
 	}
 
@@ -665,7 +635,8 @@ void* memcpy(void* d, const void* s, int n)
 	dest = (char*)d;
 	src = (char*)s;
 
-	while (n--) {
+	while (n--)
+	{
 		*dest++ = *src++;
 	}
 
@@ -718,6 +689,7 @@ char* b_to_s(char* buffer, unsigned char byte)
 	return buffer;
 }
 
+
 void display_ip(u8* ip)
 {
 	char tstring[] = "xxx";
@@ -733,6 +705,5 @@ void display_ip(u8* ip)
 	b_to_s(tstring, ip[3]);
 	b_output(tstring, (unsigned long)strlen(tstring));
 }
-
 
 /* EOF */
