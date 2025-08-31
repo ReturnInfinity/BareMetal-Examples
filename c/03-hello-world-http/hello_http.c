@@ -39,12 +39,14 @@ void display_ip(u8* ip);
 u8 src_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 u8 dst_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 u8 dst_broadcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-u8 src_IP[4] = {0, 0, 0, 0};
-u8 src_SN[4] = {0, 0, 0, 0};
-u8 src_GW[4] = {0, 0, 0, 0};
+u8 src_IP[4] = {192, 168, 4, 250};
+u8 src_SN[4] = {255, 255, 255, 0};
+u8 src_GW[4] = {192, 168, 4, 1};
 u8 dst_IP[4] = {0, 0, 0, 0};
+#ifndef NO_DHCP
 u8 dhcpdst[4] = {255, 255, 255, 255};
 u8 dhcpsrc[4] = {0, 0, 0, 0};
+#endif
 unsigned char *buffer = (unsigned char *)0x11C000;
 unsigned char tosend[ETH_FRAME_LEN];
 int running = 1, c, recv_packet_len;
@@ -129,24 +131,12 @@ const char webpage[] =
 "\t\t<h1>Hello world, from BareMetal!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.9.0 (2025 08 30)\n";
+const char version_string[] = "minIP v0.9.0 (2025 08 31)\n";
 
 /* Main code */
 int main()
 {
 	b_output(version_string, (unsigned long)strlen(version_string));
-	src_IP[0] = 192;
-	src_IP[1] = 168;
-	src_IP[2] = 4;
-	src_IP[3] = 250;
-	src_SN[0] = 255;
-	src_SN[1] = 255;
-	src_SN[2] = 255;
-	src_SN[3] = 0;
-	src_GW[0] = 192;
-	src_GW[1] = 168;
-	src_GW[2] = 4;
-	src_GW[3] = 1;
 	net_init();
 
 	while(running == 1)
@@ -443,6 +433,7 @@ int net_init()
 	char * os_MAC = (void*)0x11A008;
 	memcpy(src_MAC, os_MAC, 6); // Copy MAC address
 
+	#ifndef NO_DHCP
 	// Send a DHCP Discover packet
 	udp_packet* tx_udp = (udp_packet*)tosend;
 	memset(tosend, 0, 1500);
@@ -543,7 +534,7 @@ int net_init()
 				u8 tval = 0, tlen = 0;
 				memcpy(src_IP, buffer + 58, 4);
 				dhcp = 1;
-				b_output("DHCP - IP: ", 16);
+				b_output("DHCP - IP: ", 11);
 				display_ip(src_IP);
 
 				// Parse options
@@ -607,6 +598,7 @@ int net_init()
 	}
 
 	// Ignore the DHCP ACK for now.
+	#endif
 
 	return 0;
 }
