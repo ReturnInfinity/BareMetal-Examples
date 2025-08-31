@@ -17,4 +17,4 @@ A C example that implements a very basic TCP/IP stack (with optional DHCP client
 
 The binary for this application is just under 4KiB.
 
-If DHCP isn't requried you can remove the commented section `-DNO_DHCP` in `build.sh`. Make sure to set the correct IP values for `src_IP`, `src_SN`, and `src_GW` in `hello_http.c`.
+If DHCP isn't required you can remove the commented section `-DNO_DHCP` in `build.sh`. Make sure to set the correct IP values for `src_IP`, `src_SN`, and `src_GW` in `hello_http.c`.
