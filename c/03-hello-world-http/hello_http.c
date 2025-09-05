@@ -37,19 +37,17 @@ void display_ip(u8* ip);
 
 /* Global variables */
 u8 src_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-u8 dst_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 u8 dst_broadcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 u8 src_IP[4] = {192, 168, 4, 250};
 u8 src_SN[4] = {255, 255, 255, 0};
 u8 src_GW[4] = {192, 168, 4, 1};
-u8 dst_IP[4] = {0, 0, 0, 0};
 #ifndef NO_DHCP
 u8 dhcpdst[4] = {255, 255, 255, 255};
 u8 dhcpsrc[4] = {0, 0, 0, 0};
 #endif
 unsigned char *buffer = (unsigned char *)0x11C000;
 unsigned char tosend[ETH_FRAME_LEN];
-int running = 1, c, recv_packet_len;
+int running = 1, recv_packet_len;
 
 /* Global structs */
 #pragma pack(1)
