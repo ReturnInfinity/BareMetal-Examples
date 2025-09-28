@@ -38,19 +38,17 @@ void display_ip(u8* ip);
 
 /* Global variables */
 u8 src_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-u8 dst_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 u8 dst_broadcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 u8 src_IP[4] = {192, 168, 4, 250};
 u8 src_SN[4] = {255, 255, 255, 0};
 u8 src_GW[4] = {192, 168, 4, 1};
-u8 dst_IP[4] = {0, 0, 0, 0};
 #ifndef NO_DHCP
 u8 dhcpdst[4] = {255, 255, 255, 255};
 u8 dhcpsrc[4] = {0, 0, 0, 0};
 #endif
-unsigned char *buffer = (unsigned char *)0x11C000;
+unsigned char *buffer;
 unsigned char tosend[ETH_FRAME_LEN];
-int running = 1, c, recv_packet_len;
+int running = 1, recv_packet_len;
 
 /* Global structs */
 #pragma pack(1)
@@ -132,7 +130,7 @@ const char webpage[] =
 "\t\t<h1>Hello world, from BareMetal!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.9.0 (2025 08 31)\n";
+const char version_string[] = "hello_http v0.9.1 (2025 09 28)\n";
 
 /* Main code */
 int main()
@@ -142,7 +140,7 @@ int main()
 
 	while(running == 1)
 	{
-		recv_packet_len = b_net_rx(buffer, INTERFACE);
+		recv_packet_len = b_net_rx((void**)&buffer, INTERFACE);
 		eth_header* rx = (eth_header*)buffer;
 
 		if (recv_packet_len > 0) // Make sure we received a packet
@@ -524,8 +522,14 @@ int net_init()
 	int dhcp = 0;
 	while (dhcp == 0)
 	{
-		recv_packet_len = b_net_rx(buffer, INTERFACE);
+		recv_packet_len = b_net_rx((void**)&buffer, INTERFACE);
 		eth_header* rx = (eth_header*)buffer;
+		#ifdef DEBUG
+		if (recv_packet_len > 0)
+		{
+			b_system(DUMP_MEM, (u64)buffer, recv_packet_len);
+		}
+		#endif
 		if (swap16(rx->type) == ETHERTYPE_IPv4)
 		{
 			udp_packet* rx_udp = (udp_packet*)buffer;
