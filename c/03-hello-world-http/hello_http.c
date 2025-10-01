@@ -20,8 +20,8 @@ void display_ip(u8* ip);
 #undef ETH_FRAME_LEN
 #define ETH_FRAME_LEN 1518
 #define ETHERTYPE_ARP 0x0806
-#define ETHERTYPE_IPv4 0x0800
-#define ETHERTYPE_IPv6 0x86DD
+#define ETHERTYPE_IPV4 0x0800
+#define ETHERTYPE_IPV6 0x86DD
 #define ARP_REQUEST 1
 #define ARP_REPLY 2
 #define PROTOCOL_IP_ICMP 1
@@ -130,7 +130,7 @@ const char webpage[] =
 "\t\t<h1>Hello world, from BareMetal!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "hello_http v0.9.1 (2025 09 28)\n";
+const char version_string[] = "hello_http v0.9.1 (2025 09 30)\n";
 
 /* Main code */
 int main()
@@ -149,7 +149,7 @@ int main()
 			memset(tosend, 0, ETH_FRAME_LEN); // clear the send buffer
 			if (swap16(rx->type) == ETHERTYPE_ARP)
 			{
-				//b_output(arp, (unsigned long)strlen(arp));
+				//b_output("arp", 3);
 				arp_packet* rx_arp = (arp_packet*)buffer;
 				if (swap16(rx_arp->opcode) == ARP_REQUEST)
 				{
@@ -162,7 +162,7 @@ int main()
 						tx_arp->ethernet.type = swap16(ETHERTYPE_ARP);
 						// ARP
 						tx_arp->hardware_type = swap16(1); // Ethernet
-						tx_arp->protocol = swap16(ETHERTYPE_IPv4);
+						tx_arp->protocol = swap16(ETHERTYPE_IPV4);
 						tx_arp->hardware_size = 6;
 						tx_arp->protocol_size = 4;
 						tx_arp->opcode = swap16(ARP_REPLY);
@@ -179,7 +179,7 @@ int main()
 					// TODO - Responses to our requests
 				}
 			}
-			else if (swap16(rx->type) == ETHERTYPE_IPv4)
+			else if (swap16(rx->type) == ETHERTYPE_IPV4)
 			{
 				//b_output(ipv4, (unsigned long)strlen(ipv4));
 				ipv4_packet* rx_ipv4 = (ipv4_packet*)buffer;
@@ -196,7 +196,7 @@ int main()
 							// Ethernet
 							memcpy(tx_icmp->ipv4.ethernet.dest_mac, rx_icmp->ipv4.ethernet.src_mac, 6);
 							memcpy(tx_icmp->ipv4.ethernet.src_mac, src_MAC, 6);
-							tx_icmp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+							tx_icmp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 							// IPv4
 							tx_icmp->ipv4.version = rx_icmp->ipv4.version;
 							tx_icmp->ipv4.dsf = rx_icmp->ipv4.dsf;
@@ -240,7 +240,7 @@ int main()
 						// Ethernet
 						memcpy(tx_tcp->ipv4.ethernet.dest_mac, rx_tcp->ipv4.ethernet.src_mac, 6);
 						memcpy(tx_tcp->ipv4.ethernet.src_mac, src_MAC, 6);
-						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 						// IPv4
 						tx_tcp->ipv4.version = rx_tcp->ipv4.version;
 						tx_tcp->ipv4.dsf = rx_tcp->ipv4.dsf;
@@ -278,7 +278,7 @@ int main()
 						// Ethernet
 						memcpy(tx_tcp->ipv4.ethernet.dest_mac, rx_tcp->ipv4.ethernet.src_mac, 6);
 						memcpy(tx_tcp->ipv4.ethernet.src_mac, src_MAC, 6);
-						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 						// IPv4
 						tx_tcp->ipv4.version = rx_tcp->ipv4.version;
 						tx_tcp->ipv4.dsf = rx_tcp->ipv4.dsf;
@@ -330,7 +330,7 @@ int main()
 						// Ethernet
 						memcpy(tx_tcp->ipv4.ethernet.dest_mac, rx_tcp->ipv4.ethernet.src_mac, 6);
 						memcpy(tx_tcp->ipv4.ethernet.src_mac, src_MAC, 6);
-						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 						// IPv4
 						tx_tcp->ipv4.version = rx_tcp->ipv4.version;
 						tx_tcp->ipv4.dsf = rx_tcp->ipv4.dsf;
@@ -367,7 +367,7 @@ int main()
 					// Do nothing
 				}
 			}
-			else if (swap16(rx->type) == ETHERTYPE_IPv6)
+			else if (swap16(rx->type) == ETHERTYPE_IPV6)
 			{
 				// TODO - IPv6
 			}
@@ -429,7 +429,8 @@ int net_init()
 {
 	/* Populate the MAC Address */
 	/* Pulls the MAC from the OS sys var table... so gross */
-	char * os_MAC = (void*)0x11A008;
+	char * os_MAC = (void*)0x11A008; // Address of the MAC for interface 0
+	os_MAC += INTERFACE * 128;
 	memcpy(src_MAC, os_MAC, 6); // Copy MAC address
 
 	#ifndef NO_DHCP
@@ -439,7 +440,7 @@ int net_init()
 	// Ethernet
 	memcpy(tx_udp->ipv4.ethernet.dest_mac, dst_broadcast, 6);
 	memcpy(tx_udp->ipv4.ethernet.src_mac, src_MAC, 6);
-	tx_udp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+	tx_udp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 	// IPv4
 	tx_udp->ipv4.version = 0x45;
 	tx_udp->ipv4.dsf = 0;
@@ -530,7 +531,7 @@ int net_init()
 			b_system(DUMP_MEM, (u64)buffer, recv_packet_len);
 		}
 		#endif
-		if (swap16(rx->type) == ETHERTYPE_IPv4)
+		if (swap16(rx->type) == ETHERTYPE_IPV4)
 		{
 			udp_packet* rx_udp = (udp_packet*)buffer;
 			if (swap16(rx_udp->dest_port) == 68)
