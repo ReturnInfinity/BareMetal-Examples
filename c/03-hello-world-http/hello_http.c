@@ -20,8 +20,8 @@ void display_ip(u8* ip);
 #undef ETH_FRAME_LEN
 #define ETH_FRAME_LEN 1518
 #define ETHERTYPE_ARP 0x0806
-#define ETHERTYPE_IPv4 0x0800
-#define ETHERTYPE_IPv6 0x86DD
+#define ETHERTYPE_IPV4 0x0800
+#define ETHERTYPE_IPV6 0x86DD
 #define ARP_REQUEST 1
 #define ARP_REPLY 2
 #define PROTOCOL_IP_ICMP 1
@@ -34,6 +34,7 @@ void display_ip(u8* ip);
 #define TCP_RST 4
 #define TCP_SYN 2
 #define TCP_FIN 1
+#define INTERFACE 0
 
 /* Global variables */
 u8 src_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -45,7 +46,7 @@ u8 src_GW[4] = {192, 168, 4, 1};
 u8 dhcpdst[4] = {255, 255, 255, 255};
 u8 dhcpsrc[4] = {0, 0, 0, 0};
 #endif
-unsigned char *buffer = (unsigned char *)0x11C000;
+unsigned char *buffer;
 unsigned char tosend[ETH_FRAME_LEN];
 int running = 1, recv_packet_len;
 
@@ -129,7 +130,7 @@ const char webpage[] =
 "\t\t<h1>Hello world, from BareMetal!</h1>\n"
 "\t</body>\n"
 "</html>\n";
-const char version_string[] = "minIP v0.9.0 (2025 08 31)\n";
+const char version_string[] = "hello_http v0.9.1 (2025 09 30)\n";
 
 /* Main code */
 int main()
@@ -139,7 +140,7 @@ int main()
 
 	while(running == 1)
 	{
-		recv_packet_len = b_net_rx(buffer, 0);
+		recv_packet_len = b_net_rx((void**)&buffer, INTERFACE);
 		eth_header* rx = (eth_header*)buffer;
 
 		if (recv_packet_len > 0) // Make sure we received a packet
@@ -148,7 +149,7 @@ int main()
 			memset(tosend, 0, ETH_FRAME_LEN); // clear the send buffer
 			if (swap16(rx->type) == ETHERTYPE_ARP)
 			{
-				//b_output(arp, (unsigned long)strlen(arp));
+				//b_output("arp", 3);
 				arp_packet* rx_arp = (arp_packet*)buffer;
 				if (swap16(rx_arp->opcode) == ARP_REQUEST)
 				{
@@ -161,7 +162,7 @@ int main()
 						tx_arp->ethernet.type = swap16(ETHERTYPE_ARP);
 						// ARP
 						tx_arp->hardware_type = swap16(1); // Ethernet
-						tx_arp->protocol = swap16(ETHERTYPE_IPv4);
+						tx_arp->protocol = swap16(ETHERTYPE_IPV4);
 						tx_arp->hardware_size = 6;
 						tx_arp->protocol_size = 4;
 						tx_arp->opcode = swap16(ARP_REPLY);
@@ -170,7 +171,7 @@ int main()
 						memcpy(tx_arp->target_mac, rx_arp->sender_mac, 6);
 						memcpy(tx_arp->target_ip, rx_arp->sender_ip, 4);
 						// Send the reply
-						b_net_tx(tosend, 42, 0);
+						b_net_tx(tosend, 42, INTERFACE);
 					}
 				}
 				else if (buffer[21] == ARP_REPLY)
@@ -178,7 +179,7 @@ int main()
 					// TODO - Responses to our requests
 				}
 			}
-			else if (swap16(rx->type) == ETHERTYPE_IPv4)
+			else if (swap16(rx->type) == ETHERTYPE_IPV4)
 			{
 				//b_output(ipv4, (unsigned long)strlen(ipv4));
 				ipv4_packet* rx_ipv4 = (ipv4_packet*)buffer;
@@ -195,7 +196,7 @@ int main()
 							// Ethernet
 							memcpy(tx_icmp->ipv4.ethernet.dest_mac, rx_icmp->ipv4.ethernet.src_mac, 6);
 							memcpy(tx_icmp->ipv4.ethernet.src_mac, src_MAC, 6);
-							tx_icmp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+							tx_icmp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 							// IPv4
 							tx_icmp->ipv4.version = rx_icmp->ipv4.version;
 							tx_icmp->ipv4.dsf = rx_icmp->ipv4.dsf;
@@ -217,7 +218,7 @@ int main()
 							memcpy (tx_icmp->data, rx_icmp->data, (swap16(rx_icmp->ipv4.total_length)-20-16)); // IP length - IPv4 header - ICMP header
 							tx_icmp->checksum = checksum(&tosend[34], recv_packet_len-14-20); // Frame length - MAC header - IPv4 header
 							// Send the reply
-							b_net_tx(tosend, recv_packet_len, 0);
+							b_net_tx(tosend, recv_packet_len, INTERFACE);
 						}
 					}
 					else if (rx_icmp->type == ICMP_ECHO_REPLY)
@@ -239,7 +240,7 @@ int main()
 						// Ethernet
 						memcpy(tx_tcp->ipv4.ethernet.dest_mac, rx_tcp->ipv4.ethernet.src_mac, 6);
 						memcpy(tx_tcp->ipv4.ethernet.src_mac, src_MAC, 6);
-						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 						// IPv4
 						tx_tcp->ipv4.version = rx_tcp->ipv4.version;
 						tx_tcp->ipv4.dsf = rx_tcp->ipv4.dsf;
@@ -264,7 +265,7 @@ int main()
 						tx_tcp->urg_pointer = rx_tcp->urg_pointer;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], recv_packet_len-34, PROTOCOL_IP_TCP, recv_packet_len-34);
 						// Send the reply
-						b_net_tx(tosend, recv_packet_len, 0);
+						b_net_tx(tosend, recv_packet_len, INTERFACE);
 					}
 					else if (rx_tcp->flags == TCP_ACK)
 					{
@@ -277,7 +278,7 @@ int main()
 						// Ethernet
 						memcpy(tx_tcp->ipv4.ethernet.dest_mac, rx_tcp->ipv4.ethernet.src_mac, 6);
 						memcpy(tx_tcp->ipv4.ethernet.src_mac, src_MAC, 6);
-						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 						// IPv4
 						tx_tcp->ipv4.version = rx_tcp->ipv4.version;
 						tx_tcp->ipv4.dsf = rx_tcp->ipv4.dsf;
@@ -302,7 +303,7 @@ int main()
 						tx_tcp->urg_pointer = rx_tcp->urg_pointer;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
 						// Send the reply
-						b_net_tx(tosend, 66, 0);
+						b_net_tx(tosend, 66, INTERFACE);
 						// Send the webpage
 						tx_tcp->ipv4.total_length = swap16(52+strlen(webpage));
 						tx_tcp->ipv4.checksum = 0;
@@ -311,7 +312,7 @@ int main()
 						tx_tcp->checksum = 0;
 						memcpy((char*)tosend+66, (char*)webpage, strlen(webpage));
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32+strlen(webpage), PROTOCOL_IP_TCP, 32+strlen(webpage));
-						b_net_tx(tosend, 66+strlen(webpage), 0);
+						b_net_tx(tosend, 66+strlen(webpage), INTERFACE);
 						// Disconnect the client
 						tx_tcp->ipv4.total_length = swap16(52);
 						tx_tcp->ipv4.checksum = 0;
@@ -320,7 +321,7 @@ int main()
 						tx_tcp->flags = TCP_FIN|TCP_ACK;
 						tx_tcp->checksum = 0;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
-						b_net_tx(tosend, 66, 0);
+						b_net_tx(tosend, 66, INTERFACE);
 					}
 					else if (rx_tcp->flags == (TCP_FIN|TCP_ACK))
 					{
@@ -329,7 +330,7 @@ int main()
 						// Ethernet
 						memcpy(tx_tcp->ipv4.ethernet.dest_mac, rx_tcp->ipv4.ethernet.src_mac, 6);
 						memcpy(tx_tcp->ipv4.ethernet.src_mac, src_MAC, 6);
-						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+						tx_tcp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 						// IPv4
 						tx_tcp->ipv4.version = rx_tcp->ipv4.version;
 						tx_tcp->ipv4.dsf = rx_tcp->ipv4.dsf;
@@ -354,7 +355,7 @@ int main()
 						tx_tcp->urg_pointer = rx_tcp->urg_pointer;
 						tx_tcp->checksum = checksum_tcp(&tosend[34], 32, PROTOCOL_IP_TCP, 32);
 						// Send the reply
-						b_net_tx(tosend, 66, 0);
+						b_net_tx(tosend, 66, INTERFACE);
 					}
 				}
 				else if (rx_ipv4->protocol == PROTOCOL_IP_UDP)
@@ -366,7 +367,7 @@ int main()
 					// Do nothing
 				}
 			}
-			else if (swap16(rx->type) == ETHERTYPE_IPv6)
+			else if (swap16(rx->type) == ETHERTYPE_IPV6)
 			{
 				// TODO - IPv6
 			}
@@ -428,7 +429,8 @@ int net_init()
 {
 	/* Populate the MAC Address */
 	/* Pulls the MAC from the OS sys var table... so gross */
-	char * os_MAC = (void*)0x11A008;
+	char * os_MAC = (void*)0x11A008; // Address of the MAC for interface 0
+	os_MAC += INTERFACE * 128;
 	memcpy(src_MAC, os_MAC, 6); // Copy MAC address
 
 	#ifndef NO_DHCP
@@ -438,7 +440,7 @@ int net_init()
 	// Ethernet
 	memcpy(tx_udp->ipv4.ethernet.dest_mac, dst_broadcast, 6);
 	memcpy(tx_udp->ipv4.ethernet.src_mac, src_MAC, 6);
-	tx_udp->ipv4.ethernet.type = swap16(ETHERTYPE_IPv4);
+	tx_udp->ipv4.ethernet.type = swap16(ETHERTYPE_IPV4);
 	// IPv4
 	tx_udp->ipv4.version = 0x45;
 	tx_udp->ipv4.dsf = 0;
@@ -515,15 +517,21 @@ int net_init()
 	tosend[325] = 0xFF; // End
 
 	// Send the reply
-	b_net_tx(tosend, 326, 0);
+	b_net_tx(tosend, 326, INTERFACE);
 
 	// Wait for a DHCP Offer Packet
 	int dhcp = 0;
 	while (dhcp == 0)
 	{
-		recv_packet_len = b_net_rx(buffer, 0);
+		recv_packet_len = b_net_rx((void**)&buffer, INTERFACE);
 		eth_header* rx = (eth_header*)buffer;
-		if (swap16(rx->type) == ETHERTYPE_IPv4)
+		#ifdef DEBUG
+		if (recv_packet_len > 0)
+		{
+			b_system(DUMP_MEM, (u64)buffer, recv_packet_len);
+		}
+		#endif
+		if (swap16(rx->type) == ETHERTYPE_IPV4)
 		{
 			udp_packet* rx_udp = (udp_packet*)buffer;
 			if (swap16(rx_udp->dest_port) == 68)
@@ -592,7 +600,7 @@ int net_init()
 		tosend[337] = 0xFF; // End
 
 		// Send the reply
-		b_net_tx(tosend, 338, 0);
+		b_net_tx(tosend, 338, INTERFACE);
 	}
 
 	// Ignore the DHCP ACK for now.
