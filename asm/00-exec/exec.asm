@@ -16,6 +16,7 @@
 
 BITS 64
 ORG 0x001E0000
+DEFAULT ABS
 
 start:
 	mov esi, payload
